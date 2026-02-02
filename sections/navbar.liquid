@@ -1,0 +1,44 @@
+<nav class="navbar">
+  {% for link in section.settings.menu.links %}
+    <a href="{{ link.url }}" class="navbar__link">{{ link.title }}</a>
+  {% endfor %}
+</nav>
+
+{% stylesheet %}
+  .navbar {
+    height: 15vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1.5rem 0;
+  }
+  .navbar__link {
+    text-decoration: none;
+    color: var(--color-foreground);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .navbar__link:hover {
+    opacity: 0.6;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Navigation Bar",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "Menu",
+      "default": "main-menu"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Navigation Bar"
+    }
+  ]
+}
+{% endschema %}

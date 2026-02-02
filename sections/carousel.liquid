@@ -1,0 +1,168 @@
+{% liquid 
+  assign autoplay = section.settings.autoplay
+  assign slide_speed_s = section.settings.speed 
+  assign slide_fade_s = slide_speed_s | times: 0.2
+%}
+
+<div 
+  class="carousel"
+  data-autoplay="{{ autoplay }}"
+  data-speed="{{ slide_speed_s }}"
+>
+  <div class="carousel__track">
+    {% for block in section.blocks %}
+      <div class="carousel__slide" {{ block.shopify_attributes }}>
+        {% if block.settings.image != blank %}
+          {{ block.settings.image | image_url: width: 1920 | image_tag: 
+                alt: block.settings.image.alt | default: block.settings.caption,
+                class: "carousel__img"
+          }}
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  <div class="carousel__nav"></div>
+</div>
+
+<script>
+  (function() {
+    //--- carousel reference ---// 
+    const carousel = document.querySelector(
+      "#shopify-section-{{ section.id }} .carousel"
+    );
+    if (!carousel) return;
+
+    //--- capture slides ---// 
+    const slides = carousel.querySelectorAll(".carousel__slide");
+    if (slides.length <= 1) return;
+
+
+    //--- state management functions ---//
+    function getNext(index) {
+      return (index + 1) % slides.length;
+    }
+
+    function updateState(newIndex) {
+      // fade out current 
+      slides[current].classList.remove("carousel__slide--active");
+
+      // wait, then fade in next slide and update index 
+      setTimeout(() => {
+         slides[newIndex].classList.add("carousel__slide--active");
+         current = newIndex;
+      }, {{ slide_fade_s }} * 1000);
+    }
+
+    //--- init state ---//
+    let current = 0;
+    updateState(0);
+
+    //--- autoplay ---//
+    if ({{ autoplay }}) {
+      setInterval(function() {
+        updateState(getNext(current));
+      }, {{ slide_speed_s }} * 1000);
+    }
+  })();
+</script>
+
+
+{% stylesheet %}
+  .carousel {
+    width: 100%;
+    height: 70vh;
+  }
+
+  .carousel__track {
+    width: 100%;
+    height: 95%;
+    position: relative;
+  }
+
+  .carousel__slide {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .carousel__slide img {
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  .carousel__slide--active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .carousel__nav {
+    width: 100%;
+    height: 5%;
+  }
+{% endstylesheet %}
+
+{% style %}
+  .carousel__slide {
+    transition: all {{ slide_fade_s }}s ease-in-out;
+  }
+{% endstyle %}
+
+{% schema %}
+{
+  "name": "carousel",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "auto-rotate slides",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "label": "seconds per slide",
+      "default": 5
+    }
+  ],
+  "blocks": [
+    {
+      "type": "slide",
+      "name": "slide",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "image"
+        },
+        {
+          "type": "text",
+          "id": "caption",
+          "label": "caption"
+        }
+      ]
+    }
+  ],
+    "presets": [
+    {
+      "name": "Carousel",
+      "blocks": [
+        { "type": "slide" },
+        { "type": "slide" },
+        { "type": "slide" }
+      ]
+    }
+  ]
+}
+{% endschema %}

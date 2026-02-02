@@ -1,56 +1,67 @@
-<footer>
-  <div class="footer__copyright">
-    &copy;
-    {{ 'now' | date: '%Y' }}
-    {{ shop.name | link_to: routes.root_url }}, {{ powered_by_link }}
-  </div>
-
-  <div class="footer__links">
-    {% for link in section.settings.menu.links %}
-      {{ link.title | link_to: link.url }}
-    {% endfor %}
-  </div>
-
-  <div class="footer__payment">
-    {% if section.settings.show_payment_icons %}
-      {% for type in shop.enabled_payment_types %}
-        {{ type | payment_type_svg_tag }}
-      {% endfor %}
+<footer class="footer">
+  <div class="footer__row">
+    {% if section.settings.facebook_url != blank %}
+      <a href="{{ section.settings.facebook_url }}" class="footer__social" aria-label="Facebook" target="_blank" rel="noopener">f</a>
     {% endif %}
+    {% if section.settings.twitter_url != blank %}
+      <a href="{{ section.settings.twitter_url }}" class="footer__social" aria-label="Twitter" target="_blank" rel="noopener">t</a>
+    {% endif %}
+
+    {% for link in section.settings.menu.links %}
+      <span class="footer__divider">|</span>
+      <a href="{{ link.url }}" class="footer__link">{{ link.title }}</a>
+    {% endfor %}
   </div>
 </footer>
 
 {% stylesheet %}
-  footer {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 2rem;
+  .footer {
+    height: 5vh;
+    padding: 2rem 0 1.5rem;
   }
-  footer a {
+  .footer__row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .footer a {
     text-decoration: none;
     color: var(--color-foreground);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
-  footer .footer__links,
-  footer .footer__payment {
-    display: flex;
-    gap: 1rem;
+  .footer__social {
+    font-size: 0.85rem;
+  }
+  .footer__divider {
+    font-size: 0.7rem;
+    color: var(--color-foreground);
+    opacity: 0.4;
+  }
+  .footer a:hover {
+    opacity: 0.6;
   }
 {% endstylesheet %}
 
 {% schema %}
 {
-  "name": "t:general.footer",
+  "name": "Footer",
   "settings": [
     {
       "type": "link_list",
       "id": "menu",
-      "label": "t:labels.menu"
+      "label": "Menu"
     },
     {
-      "type": "checkbox",
-      "id": "show_payment_icons",
-      "label": "t:labels.show_payment_icons",
-      "default": true
+      "type": "url",
+      "id": "facebook_url",
+      "label": "Facebook URL"
+    },
+    {
+      "type": "url",
+      "id": "twitter_url",
+      "label": "Twitter URL"
     }
   ]
 }

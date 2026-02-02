@@ -115,3 +115,8 @@ body {
 .shopify-section > .full-width {
   grid-column: 1 / -1;
 }
+
+/* Main content area grows to fill viewport, pushing footer to bottom */
+main#MainContent {
+  flex: 1;
+}

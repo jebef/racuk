@@ -1,11 +1,11 @@
 [
   {
     "name": "theme_info",
-    "theme_name": "Skeleton",
-    "theme_version": "0.1.0",
-    "theme_author": "Shopify",
-    "theme_documentation_url": "https://help.shopify.com/manual/online-store/themes",
-    "theme_support_url": "https://support.shopify.com/"
+    "theme_name": "Racuk",
+    "theme_version": "1.0",
+    "theme_author": "Wyatt Jebef",
+    "theme_support_email": "wyattjebef@gmail.com",
+    "theme_documentation_url": "https://wyatt-jebef.com/"
   },
   {
     "name": "t:general.typography",

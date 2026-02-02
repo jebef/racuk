@@ -9,12 +9,26 @@
  */
 {
   "sections": {
-    "main": {
-      "type": "hello-world",
+    "carousel": {
+      "type": "image-carousel",
+      "settings": {
+        "autoplay": true,
+        "speed": 5
+      },
+      "blocks": {
+        "slide_1": { "type": "slide", "settings": {} },
+        "slide_2": { "type": "slide", "settings": {} },
+        "slide_3": { "type": "slide", "settings": {} }
+      },
+      "block_order": ["slide_1", "slide_2", "slide_3"]
+    },
+    "navbar": {
+      "type": "navbar",
       "settings": {}
     }
   },
   "order": [
-    "main"
+    "carousel",
+    "navbar"
   ]
 }
