@@ -1,44 +1,296 @@
-<nav class="navbar">
-  {% for link in section.settings.menu.links %}
-    <a href="{{ link.url }}" class="navbar__link">{{ link.title }}</a>
+{% comment %}
+  Builds a two-level tree from flat section blocks (node | leaf).
+  Block order defines hierarchy: roots (level 0) contain branches (level 1)
+  which contain leaf links. Leaves that sit directly under a root work too.
+{% endcomment %}
+<nav class="navbar" id="site-navbar">
+  {% assign in_root_sub  = false %}
+  {% assign in_branch_sub = false %}
+  {% for block in section.blocks %}
+    {% if block.type == 'node' %}
+      {% assign lvl = block.settings.level | plus: 0 %}
+      {% if lvl == 0 %}
+        {% if in_branch_sub %}</div></div>{% assign in_branch_sub = false %}{% endif %}
+        {% if in_root_sub  %}</div></div>{% assign in_root_sub  = false %}{% endif %}
+        <div class="navbar__item" {{ block.shopify_attributes }}>
+          <button class="navbar__node" aria-expanded="false">{{- block.settings.label | default: 'menu' -}}</button>
+          <div class="navbar__sub">
+        {% assign in_root_sub = true %}
+      {% elsif lvl == 1 %}
+        {% if in_branch_sub %}</div></div>{% assign in_branch_sub = false %}{% endif %}
+        <div class="navbar__item" {{ block.shopify_attributes }}>
+          <button class="navbar__node" aria-expanded="false">{{- block.settings.label | default: 'menu' -}}</button>
+          <div class="navbar__sub">
+        {% assign in_branch_sub = true %}
+      {% endif %}
+    {% elsif block.type == 'leaf' %}
+      <a href="{{ block.settings.url | default: '#' }}" class="navbar__leaf" {{ block.shopify_attributes }}>
+        {{- block.settings.label | default: 'link' -}}
+      </a>
+    {% endif %}
   {% endfor %}
+  {% if in_branch_sub %}</div></div>{% endif %}
+  {% if in_root_sub  %}</div></div>{% endif %}
 </nav>
+
+<script>
+  (function () {
+    var nav = document.getElementById('site-navbar');
+    if (!nav) return;
+
+    /* Returns direct .navbar__item children (excludes leaf <a> elements). */
+    function childItems(parent) {
+      return Array.from(parent.children).filter(function (el) {
+        return el.classList.contains('navbar__item');
+      });
+    }
+
+    function open(sub, btn) {
+      sub.classList.add('navbar__sub--visible');
+      if (btn) { btn.setAttribute('aria-expanded', 'true');  btn.classList.add('navbar__node--active'); }
+    }
+
+    function close(sub, btn) {
+      if (!sub) return;
+      sub.classList.remove('navbar__sub--visible');
+      if (btn) { btn.setAttribute('aria-expanded', 'false'); btn.classList.remove('navbar__node--active'); }
+    }
+
+    /*
+     * closeQuick — closes a sub at 0.2 s instead of the default 0.6 s.
+     * Used for sequential cascade steps so each level fades before the next.
+     * Technique: add --quick (overrides transition-duration) then force a
+     * style flush via getBoundingClientRect() before removing --visible,
+     * so the browser applies the shorter duration to the outgoing transition.
+     */
+    function closeQuick(sub, btn) {
+      if (!sub) return;
+      sub.classList.add('navbar__sub--quick');
+      sub.getBoundingClientRect();
+      close(sub, btn);
+      setTimeout(function () { sub.classList.remove('navbar__sub--quick'); }, 250);
+    }
+
+    var roots = childItems(nav);
+
+    /* ── Branch toggles ──────────────────────────────────────────────────── */
+    /* Sibling branches close at default speed; no cascade needed at this level. */
+    roots.forEach(function (root) {
+      var rsub = root.querySelector(':scope > .navbar__sub');
+      if (!rsub) return;
+      var branches = childItems(rsub);
+      branches.forEach(function (branch) {
+        var bbtn = branch.querySelector(':scope > .navbar__node');
+        var bsub = branch.querySelector(':scope > .navbar__sub');
+        if (!bbtn || !bsub) return;
+        bbtn.addEventListener('click', function () {
+          var isOpen = bsub.classList.contains('navbar__sub--visible');
+          if (isOpen) { close(bsub, bbtn); return; }
+
+          /* Sequential cascade: close any open sibling branch before opening this one. */
+          var delay = 0;
+          branches.forEach(function (other) {
+            if (other === branch) return;
+            var os = other.querySelector(':scope > .navbar__sub');
+            var ob = other.querySelector(':scope > .navbar__node');
+            if (!os || !os.classList.contains('navbar__sub--visible')) return;
+            var t = delay;
+            setTimeout(function () { closeQuick(os, ob); }, t);
+            delay += 200;
+          });
+          setTimeout(function () { open(bsub, bbtn); }, delay);
+        });
+      });
+    });
+
+    /* ── Root toggles ────────────────────────────────────────────────────── */
+    /*
+     * Clicking an open root: closes it and any open branches simultaneously
+     * at the default 0.6 s speed.
+     *
+     * Clicking a closed root: if a sibling root is open, collapse its tree
+     * sequentially — each open branch fades out at 0.2 s, then the root
+     * fades out at 0.2 s — before the new root fades in at 0.6 s.
+     */
+    roots.forEach(function (root) {
+      var rbtn = root.querySelector(':scope > .navbar__node');
+      var rsub = root.querySelector(':scope > .navbar__sub');
+      if (!rbtn || !rsub) return;
+
+      rbtn.addEventListener('click', function () {
+        var isOpen = rsub.classList.contains('navbar__sub--visible');
+
+        if (isOpen) {
+          childItems(rsub).forEach(function (b) {
+            close(b.querySelector(':scope > .navbar__sub'), b.querySelector(':scope > .navbar__node'));
+          });
+          close(rsub, rbtn);
+          return;
+        }
+
+        /* Sequential cascade: close any open sibling root before opening this one. */
+        var delay = 0;
+        roots.forEach(function (other) {
+          if (other === root) return;
+          var os = other.querySelector(':scope > .navbar__sub');
+          var ob = other.querySelector(':scope > .navbar__node');
+          if (!os || !os.classList.contains('navbar__sub--visible')) return;
+
+          /* Close open branches first, 0.2 s each. */
+          childItems(os)
+            .filter(function (b) { return b.querySelector(':scope > .navbar__sub.navbar__sub--visible'); })
+            .forEach(function (b) {
+              var t = delay;
+              setTimeout(function () { closeQuick(b.querySelector(':scope > .navbar__sub'), b.querySelector(':scope > .navbar__node')); }, t);
+              delay += 200;
+            });
+
+          /* Then close the root itself. */
+          var t = delay;
+          setTimeout(function () { closeQuick(os, ob); }, t);
+          delay += 200;
+        });
+
+        setTimeout(function () { open(rsub, rbtn); }, delay);
+      });
+    });
+  })();
+</script>
 
 {% stylesheet %}
   .navbar {
-    height: 15vh;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    display: grid;
+    grid-template-columns: max-content; /* all rows same width → subs align */
+    row-gap: 0.3rem;
     padding: 1.5rem 0;
   }
-  .navbar__link {
-    text-decoration: none;
-    color: var(--color-foreground);
-    font-size: 0.75rem;
+
+  .navbar__item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Subs float to the right; default transition is 0.6 s for open and close. */
+  .navbar__sub {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    position: absolute;
+    top: 0;
+    left: calc(100% + 2rem);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.6s ease, visibility 0.6s;
+  }
+
+  /*
+   * Sequential-cascade override. Must follow .navbar__sub in source so the
+   * transition-duration longhand wins the equal-specificity tie, reducing
+   * the outgoing transition to 0.2 s during a cascade step.
+   */
+  .navbar__sub--quick {
+    transition-duration: 0.2s;
+  }
+
+  .navbar__sub--visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .navbar__node,
+  .navbar__leaf {
+    display: block;
+    font-size: 1.125rem; /* 18px */
     letter-spacing: 0.1em;
     text-transform: uppercase;
+    color: var(--color-foreground);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-family: inherit;
+    text-align: left;
+    line-height: 1.8;
   }
-  .navbar__link:hover {
-    opacity: 0.6;
+
+  .navbar__node:hover,
+  .navbar__leaf:hover,
+  .navbar__node--active {
+    opacity: 0.5;
+  }
+
+  /* Mobile: tree expands vertically. */
+  @media (max-width: 540px) {
+    .navbar__item { position: static; }
+
+    .navbar__sub {
+      position: static;
+      max-height: 0;
+      overflow: hidden;
+      margin-left: 1.5rem;
+      transition: max-height 0.6s ease, opacity 0.6s ease, visibility 0.6s;
+    }
+
+    /* Must follow mobile .navbar__sub for the same source-order reason as above. */
+    .navbar__sub--quick { transition-duration: 0.2s; }
+
+    .navbar__sub--visible { max-height: 20rem; }
+
+    .navbar__node,
+    .navbar__leaf { font-size: 0.75rem; }
   }
 {% endstylesheet %}
 
 {% schema %}
 {
   "name": "Navigation Bar",
-  "settings": [
+  "blocks": [
     {
-      "type": "link_list",
-      "id": "menu",
-      "label": "Menu",
-      "default": "main-menu"
+      "type": "node",
+      "name": "Node",
+      "settings": [
+        {
+          "type": "select",
+          "id": "level",
+          "label": "Level",
+          "options": [
+            { "value": "0", "label": "Root" },
+            { "value": "1", "label": "↳ Branch" }
+          ],
+          "default": "0"
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "menu"
+        }
+      ]
+    },
+    {
+      "type": "leaf",
+      "name": "Leaf (link)",
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "link"
+        },
+        {
+          "type": "url",
+          "id": "url",
+          "label": "URL"
+        }
+      ]
     }
   ],
-  "presets": [
-    {
-      "name": "Navigation Bar"
-    }
-  ]
+  "presets": [{ "name": "Navigation Bar" }]
 }
 {% endschema %}

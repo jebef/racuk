@@ -10,7 +10,7 @@
 {
   "sections": {
     "carousel": {
-      "type": "image-carousel",
+      "type": "carousel",
       "settings": {
         "autoplay": true,
         "speed": 5
@@ -24,7 +24,24 @@
     },
     "navbar": {
       "type": "navbar",
-      "settings": {}
+      "settings": {},
+      "blocks": {
+        "n0": { "type": "node", "settings": { "level": "0", "label": "collection" } },
+        "n1": { "type": "node", "settings": { "level": "1", "label": "clothing" } },
+        "l0": { "type": "leaf", "settings": { "label": "outerwear", "url": "/collections/outerwear" } },
+        "l1": { "type": "leaf", "settings": { "label": "shirts", "url": "/collections/shirts" } },
+        "l2": { "type": "leaf", "settings": { "label": "pants", "url": "/collections/pants" } },
+        "l3": { "type": "leaf", "settings": { "label": "knits", "url": "/collections/knits" } },
+        "n2": { "type": "node", "settings": { "level": "1", "label": "portage" } },
+        "l4": { "type": "leaf", "settings": { "label": "daily", "url": "/collections/daily" } },
+        "l5": { "type": "leaf", "settings": { "label": "travel", "url": "/collections/travel" } },
+        "l6": { "type": "leaf", "settings": { "label": "slg", "url": "/collections/slg" } },
+        "n3": { "type": "node", "settings": { "level": "0", "label": "about" } },
+        "l7": { "type": "leaf", "settings": { "label": "made here", "url": "/pages/made-here" } },
+        "l8": { "type": "leaf", "settings": { "label": "customer care", "url": "/pages/customer-care" } },
+        "l9": { "type": "leaf", "settings": { "label": "blog", "url": "/blogs/news" } }
+      },
+      "block_order": ["n0", "n1", "l0", "l1", "l2", "l3", "n2", "l4", "l5", "l6", "n3", "l7", "l8", "l9"]
     }
   },
   "order": [

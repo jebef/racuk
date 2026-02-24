@@ -1,4 +1,4 @@
-<header>
+<header class="site-header">
   <a href="{{ routes.root_url }}" class="header__logo">
     {% if section.settings.logo != blank %}
       {{ section.settings.logo | image_url: width: 1920 | image_tag:
@@ -11,30 +11,200 @@
       <span class="header__logo-text">{{ section.settings.logo-text }}</span>
     {% endif %}
   </a>
+
+  <button class="hamburger" id="hamburger-btn" aria-label="Open navigation" aria-expanded="false">
+    <span class="hamburger__line"></span>
+    <span class="hamburger__line"></span>
+    <span class="hamburger__line"></span>
+  </button>
 </header>
 
+<div class="drawer" id="site-drawer" aria-hidden="true" aria-label="Navigation menu">
+  <nav class="drawer__nav">
+    {% for link in section.settings.drawer_menu.links %}
+      <a href="{{ link.url }}" class="drawer__link">{{ link.title }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+<div class="drawer__overlay" id="drawer-overlay" aria-hidden="true"></div>
+
+<script>
+  (function () {
+    var btn     = document.getElementById('hamburger-btn');
+    var drawer  = document.getElementById('site-drawer');
+    var overlay = document.getElementById('drawer-overlay');
+    if (!btn || !drawer) return;
+
+    function openDrawer() {
+      btn.classList.add('hamburger--open');
+      btn.setAttribute('aria-expanded', 'true');
+      btn.setAttribute('aria-label', 'Close navigation');
+      drawer.classList.add('drawer--open');
+      drawer.setAttribute('aria-hidden', 'false');
+      if (overlay) overlay.classList.add('drawer__overlay--visible');
+      document.body.classList.add('body--drawer-open');
+    }
+
+    function closeDrawer() {
+      btn.classList.remove('hamburger--open');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'Open navigation');
+      drawer.classList.remove('drawer--open');
+      drawer.setAttribute('aria-hidden', 'true');
+      if (overlay) overlay.classList.remove('drawer__overlay--visible');
+      document.body.classList.remove('body--drawer-open');
+    }
+
+    btn.addEventListener('click', function () {
+      btn.classList.contains('hamburger--open') ? closeDrawer() : openDrawer();
+    });
+
+    if (overlay) {
+      overlay.addEventListener('click', closeDrawer);
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeDrawer();
+    });
+  })();
+</script>
+
 {% stylesheet %}
-  header {
+  /* ── Header ── */
+  .site-header {
     height: 10vh;
+    min-height: 60px;
     padding: 1.5rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem; /* minimum gap even if content is large */
   }
-  header a {
+
+  .site-header a {
     text-decoration: none;
     color: var(--color-foreground);
+    min-width: 0; /* allow logo to shrink on tight viewports */
+    flex-shrink: 1;
   }
+
+  .header__logo {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+  }
+
   .header__logo-text {
-    font-size: clamp(1.5rem, 3vw, 2.5rem);
-    font-weight: 700;
-    letter-spacing: 0.3em;
+    /* 3× the hamburger height (14px) = 42px = 2.625rem */
+    font-size: clamp(1.4rem, 5.5vw, 2.625rem);
+    font-weight: 300;
+    letter-spacing: 0.25em;
     text-transform: uppercase;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* ── Hamburger ── */
+  .hamburger {
+    flex-shrink: 0;
+    width: 20px;
+    height: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 300;
+    position: relative;
+  }
+
+  .hamburger__line {
+    display: block;
+    width: 100%;
+    height: 1.5px;
+    background-color: var(--color-foreground);
+    transition: transform 0.3s ease, opacity 0.25s ease;
+  }
+
+  .hamburger--open .hamburger__line:nth-child(1) {
+    transform: translateY(6.25px) rotate(45deg);
+  }
+  .hamburger--open .hamburger__line:nth-child(2) {
+    opacity: 0;
+  }
+  .hamburger--open .hamburger__line:nth-child(3) {
+    transform: translateY(-6.25px) rotate(-45deg);
+  }
+
+  /* ── Drawer ── */
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 100dvh;
+    height: 100vh;
+    background: var(--color-background);
+    border-left: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    transform: translateX(100%);
+    transition: transform 0.5s ease;
+    z-index: 200;
+    padding: 3.5rem 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .drawer--open {
+    transform: translateX(0);
+  }
+
+  .drawer__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+
+  .drawer__link {
+    text-decoration: none;
+    color: var(--color-foreground);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1.8;
+  }
+
+  .drawer__link:hover {
+    opacity: 0.5;
+  }
+
+  /* ── Overlay ── */
+  .drawer__overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    cursor: default;
+  }
+
+  .drawer__overlay--visible {
+    display: block;
+  }
+
+  body.body--drawer-open {
+    overflow: hidden;
   }
 {% endstylesheet %}
 
 {% style %}
   .header__logo-img {
     display: block;
-    height: auto;
-    width: {{ section.settings.logo_width }}vw;
+    height: 100%;
+    width: auto;
+    max-width: {{ section.settings.logo_width }}vw;
   }
 {% endstyle %}
 
@@ -55,12 +225,17 @@
     {
       "type": "range",
       "id": "logo_width",
-      "min": 20,
-      "max": 100,
+      "min": 10,
+      "max": 60,
       "step": 5,
-      "unit": "vw",
-      "label": "Logo width (% of viewport)",
-      "default": 80
+      "label": "Logo Image Width",
+      "default": 20
+    },
+    {
+      "type": "link_list",
+      "id": "drawer_menu",
+      "label": "Slide-in menu links",
+      "default": "main-menu"
     }
   ]
 }
