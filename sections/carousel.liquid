@@ -21,7 +21,8 @@
       </div>
     {% endfor %}
   </div>
-  <div class="carousel__nav"></div>
+  <button class="carousel__arrow carousel__arrow--prev" aria-label="Previous slide"></button>
+  <button class="carousel__arrow carousel__arrow--next" aria-label="Next slide"></button>
 </div>
 
 <script>
@@ -37,9 +38,10 @@
       return;
     }
 
-    var current = 0;
+    var current    = 0;
+    var intervalId = null;
+    var manualTimer = null;
 
-    // Show first slide immediately without flicker
     slides[0].classList.add('carousel__slide--active');
 
     function goTo(newIndex) {
@@ -50,15 +52,37 @@
       }, {{ slide_fade_s }} * 1000);
     }
 
-    function next() {
-      goTo((current + 1) % slides.length);
+    function next() { goTo((current + 1) % slides.length); }
+    function prev() { goTo((current - 1 + slides.length) % slides.length); }
+
+    function startAutoplay() {
+      if (intervalId || !{{ autoplay }}) return;
+      intervalId = setInterval(next, {{ slide_speed_s }} * 1000);
     }
 
-    if ({{ autoplay }}) {
-      setInterval(next, {{ slide_speed_s }} * 1000);
+    function stopAutoplay() {
+      if (intervalId) { clearInterval(intervalId); intervalId = null; }
     }
 
-    // Touch/swipe support
+    if ({{ autoplay }}) startAutoplay();
+
+    /* manualNav — navigate then hold for 1.5s before resuming autoplay. */
+    function manualNav(fn) {
+      fn();
+      stopAutoplay();
+      if (manualTimer) { clearTimeout(manualTimer); manualTimer = null; }
+      manualTimer = setTimeout(function () {
+        manualTimer = null;
+        startAutoplay();
+      }, 1500);
+    }
+
+    var prevBtn = carousel.querySelector('.carousel__arrow--prev');
+    var nextBtn = carousel.querySelector('.carousel__arrow--next');
+    if (prevBtn) prevBtn.addEventListener('click', function () { manualNav(prev); });
+    if (nextBtn) nextBtn.addEventListener('click', function () { manualNav(next); });
+
+    /* Touch/swipe support — treated as manual navigation. */
     var touchStartX = 0;
     var touchStartY = 0;
 
@@ -71,10 +95,7 @@
       var dx = e.changedTouches[0].clientX - touchStartX;
       var dy = e.changedTouches[0].clientY - touchStartY;
       if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
-        goTo(dx < 0
-          ? (current + 1) % slides.length
-          : (current - 1 + slides.length) % slides.length
-        );
+        manualNav(dx < 0 ? next : prev);
       }
     }, { passive: true });
   })();
@@ -85,11 +106,12 @@
   .carousel {
     width: 100%;
     height: clamp(240px, 65vh, 85vh);
+    position: relative;
   }
 
   .carousel__track {
     width: 100%;
-    height: 95%;
+    height: 100%;
     position: relative;
   }
 
@@ -107,15 +129,49 @@
     visibility: visible;
   }
 
-  .carousel__nav {
-    width: 100%;
-    height: 5%;
+  /* Arrows */
+  .carousel__arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.75rem;
+    color: rgba(0, 0, 0, 0.18);
+    transition: color 0.2s ease;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
+
+  .carousel__arrow:hover {
+    color: var(--color-foreground, #000);
+  }
+
+  .carousel__arrow--prev { left: 1rem; }
+  .carousel__arrow--next { right: 1rem; }
+
+  /* CSS chevron drawn with two borders */
+  .carousel__arrow::before {
+    content: '';
+    display: block;
+    width: 11px;
+    height: 11px;
+    border-top: 1.5px solid currentColor;
+    border-right: 1.5px solid currentColor;
+  }
+
+  .carousel__arrow--prev::before { transform: rotate(-135deg); }
+  .carousel__arrow--next::before { transform: rotate(45deg); }
 
   @media (max-width: 480px) {
     .carousel {
       height: clamp(200px, 55vh, 70vh);
     }
+
+    .carousel__arrow { display: none; }
   }
 {% endstylesheet %}
 

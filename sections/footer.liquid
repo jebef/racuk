@@ -11,18 +11,28 @@
       <span class="footer__divider">|</span>
       <a href="{{ link.url }}" class="footer__link">{{ link.title }}</a>
     {% endfor %}
+
+    <span class="footer__copyright">
+      {%- if section.settings.copyright_text != blank -%}
+        {{ section.settings.copyright_text }}
+      {%- else -%}
+        BASIL RACUK &copy; {{ 'now' | date: '%Y' }}
+      {%- endif -%}
+    </span>
   </div>
 </footer>
 
 {% stylesheet %}
   .footer {
-    height: 5vh;
-    padding: 2rem 0 1.5rem;
+    padding: 0 0 1.75rem;
+    display: flex;
+    align-items: center;
   }
   .footer__row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    width: 100%;
   }
   .footer a {
     text-decoration: none;
@@ -41,6 +51,11 @@
   }
   .footer a:hover {
     opacity: 0.6;
+  }
+  .footer__copyright {
+    margin-left: auto;
+    font-size: clamp(0.65rem, 2.8vw, 1rem);
+    color: rgba(0, 0, 0, 0.18);
   }
 {% endstylesheet %}
 
@@ -62,6 +77,12 @@
       "type": "url",
       "id": "twitter_url",
       "label": "Twitter URL"
+    },
+    {
+      "type": "text",
+      "id": "copyright_text",
+      "label": "Copyright text",
+      "placeholder": "BASIL RACUK © 2025"
     }
   ]
 }

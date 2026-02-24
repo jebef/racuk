@@ -21,9 +21,9 @@
 
 <div class="drawer" id="site-drawer" aria-hidden="true" aria-label="Navigation menu">
   <nav class="drawer__nav">
-    {% for link in section.settings.drawer_menu.links %}
-      <a href="{{ link.url }}" class="drawer__link">{{ link.title }}</a>
-    {% endfor %}
+    <a href="{{ routes.all_products_collection_url }}" class="drawer__link">shop</a>
+    <a href="{{ routes.cart_url }}" class="drawer__link">cart</a>
+    <a href="/pages/contact" class="drawer__link">contact</a>
   </nav>
 </div>
 
@@ -98,7 +98,7 @@
   .header__logo-text {
     /* 3× the hamburger height (14px) = 42px = 2.625rem */
     font-size: clamp(1.4rem, 5.5vw, 2.625rem);
-    font-weight: 300;
+    font-weight: 500;
     letter-spacing: 0.25em;
     text-transform: uppercase;
     line-height: 1;
@@ -231,12 +231,6 @@
       "label": "Logo Image Width",
       "default": 20
     },
-    {
-      "type": "link_list",
-      "id": "drawer_menu",
-      "label": "Slide-in menu links",
-      "default": "main-menu"
-    }
   ]
 }
 {% endschema %}
