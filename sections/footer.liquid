@@ -37,15 +37,15 @@
   .footer a {
     text-decoration: none;
     color: var(--color-foreground);
-    font-size: 0.7rem;
+    font-size: var(--font-size-small);
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
   .footer__social {
-    font-size: 0.85rem;
+    font-size: var(--font-size-small);
   }
   .footer__divider {
-    font-size: 0.7rem;
+    font-size: var(--font-size-small);
     color: var(--color-foreground);
     opacity: 0.4;
   }
@@ -54,7 +54,8 @@
   }
   .footer__copyright {
     margin-left: auto;
-    font-size: clamp(0.65rem, 2.8vw, 1rem);
+    font-size: var(--font-size-small);
+    letter-spacing: 0.1em;
     color: rgba(0, 0, 0, 0.18);
   }
 {% endstylesheet %}

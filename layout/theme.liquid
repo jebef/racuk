@@ -31,7 +31,7 @@
     {{ content_for_header }}
   </head>
 
-  <body>
+  <body class="template-{{ request.page_type }}">
     {% sections 'header-group' %}
 
     <main id="MainContent" role="main">

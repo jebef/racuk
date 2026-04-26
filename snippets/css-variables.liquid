@@ -19,5 +19,10 @@
     --color-background: {{ settings.background_color | default: '#ffffff' }};
     --color-foreground: {{ settings.foreground_color | default: '#000000' }};
     --style-border-radius-inputs: {{ settings.input_corner_radius | default: 0 }}px;
+    --font-size-xsmall: {{ settings.font_size_xsmall | default: 10 }}px;
+    --font-size-small:  {{ settings.font_size_small  | default: 16 }}px;
+    --font-size-medium: {{ settings.font_size_medium | default: 18 }}px;
+    --font-size-large:  {{ settings.font_size_large  | default: 24 }}px;
+    --font-size-xlarge: {{ settings.font_size_xlarge | default: 40 }}px;
   }
 {% endstyle %}

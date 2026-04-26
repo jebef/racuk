@@ -1,55 +1,161 @@
 {% comment %}
-  This section is used in the list-collections template to render a list of
-  collections.
-
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
+  List-collections page (/collections).
+  Shows top-level category cards driven by the nav menu.
+  Breadcrumb: Home / Collection
 {% endcomment %}
 
-<h1>{{ 'collections.title' | t }}</h1>
+{%- liquid
+  assign nav = nil
+  if section.settings.nav_menu != blank
+    assign nav = linklists[section.settings.nav_menu]
+  endif
+-%}
 
-<div
-  class="collections {{ section.settings.grid_item_width }}"
-  style="--grid-gap: {{ section.settings.grid_gap }}px"
->
-  {% for collection in collections %}
-    <a class="collection-card" href="{{ collection.url }}">
-      {% if collection.featured_image %}
-        {% render 'image',
-          class: 'collection-card__image',
-          image: collection.featured_image,
-          width: 600,
-          height: 600,
-          crop: 'center'
-        %}
-      {% endif %}
+<nav class="collection-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{ routes.root_url }}">Home</a>
+  <span class="crumb__sep">/</span>
+  <span class="crumb__current">Collection</span>
+</nav>
 
-      <div class="collection-card__content">
-        <p>{{ collection.title }}</p>
+<div class="col-card-grid">
+  {%- if nav != nil and nav.links.size > 0 -%}
 
-        {% if collection.description %}
-          <p>{{ collection.description | strip_html | truncatewords: 15 }}</p>
-        {% endif %}
-      </div>
-    </a>
-  {% endfor %}
+    {%- for link in nav.links -%}
+      {%- assign col_handle = link.url | remove: '/collections/' -%}
+      {%- assign col = collections[col_handle] -%}
+      <a class="col-card" href="{{ link.url }}">
+        <div class="col-card__image-wrap">
+          {%- if col.featured_image -%}
+            <img
+              class="col-card__img"
+              src="{{ col.featured_image | image_url: width: 800 }}"
+              alt="{{ col.featured_image.alt | escape | default: col.title }}"
+              width="800"
+              height="800"
+              loading="lazy"
+            >
+          {%- else -%}
+            <div class="col-card__placeholder">
+              {{ 'collection-1' | placeholder_svg_tag: 'col-card__placeholder-svg' }}
+            </div>
+          {%- endif -%}
+        </div>
+        <div class="col-card__info">
+          <span class="col-card__title">{{ link.title }}</span>
+        </div>
+      </a>
+    {%- endfor -%}
+
+  {%- else -%}
+
+    {%- comment %} Fallback: show all collections if no menu configured {%- endcomment %}
+    {%- for col in collections -%}
+      <a class="col-card" href="{{ col.url }}">
+        <div class="col-card__image-wrap">
+          {%- if col.featured_image -%}
+            <img
+              class="col-card__img"
+              src="{{ col.featured_image | image_url: width: 800 }}"
+              alt="{{ col.featured_image.alt | escape | default: col.title }}"
+              width="800"
+              height="800"
+              loading="lazy"
+            >
+          {%- else -%}
+            <div class="col-card__placeholder">
+              {{ 'collection-1' | placeholder_svg_tag: 'col-card__placeholder-svg' }}
+            </div>
+          {%- endif -%}
+        </div>
+        <div class="col-card__info">
+          <span class="col-card__title">{{ col.title }}</span>
+        </div>
+      </a>
+    {%- endfor -%}
+
+  {%- endif -%}
 </div>
 
 {% stylesheet %}
-  .collections {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(var(--collection-card-size), 100%), 1fr));
-    gap: var(--grid-gap);
-  }
-  .collections--compact {
-    --collection-card-size: 160px;
-  }
-  .collections--full {
-    --collection-card-size: 280px;
-  }
-  .collection-card {
+  /* ── Breadcrumb (shared with collection page) ── */
+  .collection-breadcrumb {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding-block: 1.5rem 2rem;
+    font-size: var(--font-size-small);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .collection-breadcrumb a {
+    text-decoration: none;
+    color: var(--color-foreground);
+    transition: opacity 0.15s ease;
+  }
+
+  .collection-breadcrumb a:hover { opacity: 0.5; }
+  .crumb__sep   { opacity: 0.3; }
+  .crumb__current { opacity: 0.45; }
+
+  /* ── Card grid ── */
+  .col-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding-bottom: 4rem;
+  }
+
+  @media (max-width: 540px) {
+    .col-card-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Collection card ── */
+  .col-card {
+    display: block;
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  .col-card__image-wrap {
+    position: relative;
     width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, var(--color-background));
+  }
+
+  .col-card__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: opacity 0.3s ease;
+  }
+
+  .col-card:hover .col-card__img { opacity: 0.5; }
+  .col-card:hover .col-card__title { opacity: 0.5; }
+
+  .col-card__placeholder,
+  .col-card__placeholder-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0.12;
+  }
+
+  .col-card__info {
+    padding: 0.6rem 0 1rem;
+  }
+
+  .col-card__title {
+    font-size: var(--font-size-small);
+    transition: opacity 0.2s ease;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1.4;
   }
 {% endstylesheet %}
 
@@ -58,26 +164,11 @@
   "name": "t:general.collections_grid",
   "settings": [
     {
-      "type": "select",
-      "id": "grid_item_width",
-      "label": "t:labels.grid_item_width",
-      "options": [
-        { "value": "collections--compact", "label": "t:options.size.small" },
-        { "value": "collections--full", "label": "t:options.size.large" }
-      ],
-      "default": "collections--full"
-    },
-    {
-      "type": "range",
-      "id": "grid_gap",
-      "label": "t:labels.grid_gap",
-      "min": 0,
-      "max": 50,
-      "step": 5,
-      "unit": "px",
-      "default": 10
+      "type": "link_list",
+      "id": "nav_menu",
+      "label": "Navigation menu",
+      "info": "Top-level links become category cards. Should match your main navbar menu."
     }
-  ],
-  "presets": [{ "name": "t:general.collections_grid" }]
+  ]
 }
 {% endschema %}

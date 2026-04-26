@@ -1,47 +1,368 @@
 {% comment %}
-  This section is used in the collection template to render collection page
-  listing all products within a collection.
+  Collection page — two modes driven by whether the collection has products.
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
+  Leaf mode   (products exist) → breadcrumb + product grid
+  Parent mode (no products)    → breadcrumb + sub-collection card grid
+
+  The nav menu is the single source of truth for hierarchy and breadcrumb.
+  Admin adds a new category by: creating a collection, adding it to the menu.
 {% endcomment %}
 
-<h1>{{ collection.title }}</h1>
+{%- liquid
+  assign per_page  = section.settings.products_per_page | default: 24
+  assign is_leaf   = false
+  if collection.products_count > 0
+    assign is_leaf = true
+  endif
 
-<div class="collection-products">
-  {% paginate collection.products by 20 %}
-    {% for product in collection.products %}
-      <div class="collection-product">
-        {% if product.featured_image %}
-          {% render 'image',
-            class: 'collection-product__image',
-            image: product.featured_image,
-            url: product.url,
-            width: 400,
-            height: 400,
-            crop: 'center'
-          %}
-        {% endif %}
-        <div class="collection-product__content">
-          <p>{{ product.title | escape | link_to: product.url }}</p>
-          <p>{{ product.price | money }}</p>
-        </div>
+  assign crumb_parent_title = nil
+  assign crumb_parent_url   = nil
+  assign parent_sub_links   = nil
+
+  if section.settings.nav_menu != blank
+    assign nav   = linklists[section.settings.nav_menu]
+    assign found = false
+
+    for link in nav.links
+      unless found
+        assign link_handle = link.url | remove: '/collections/'
+        if link_handle == collection.handle
+          assign crumb_parent_title = link.title
+          assign crumb_parent_url   = link.url
+          assign parent_sub_links   = link.links
+          assign found = true
+        endif
+        for sub in link.links
+          unless found
+            assign sub_handle = sub.url | remove: '/collections/'
+            if sub_handle == collection.handle
+              assign crumb_parent_title = link.title
+              assign crumb_parent_url   = link.url
+              assign found = true
+            endif
+          endunless
+        endfor
+      endunless
+    endfor
+  endif
+-%}
+
+{%- comment %} ── Breadcrumb ── {%- endcomment %}
+<nav class="collection-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{ routes.root_url }}">Home</a>
+  <span class="crumb__sep">/</span>
+  <a href="{{ routes.collections_url }}">Collection</a>
+  {%- if crumb_parent_url != nil and crumb_parent_url != collection.url -%}
+    <span class="crumb__sep">/</span>
+    <a href="{{ crumb_parent_url }}">{{ crumb_parent_title }}</a>
+  {%- endif -%}
+  <span class="crumb__sep">/</span>
+  <span class="crumb__current">{{ collection.title }}</span>
+</nav>
+
+{%- if is_leaf -%}
+
+  {%- comment %} ── Leaf mode: product grid ── {%- endcomment %}
+  {%- paginate collection.products by per_page -%}
+    <div class="product-grid">
+
+      {%- for product in collection.products -%}
+        <a class="product-card" href="{{ product.url | within: collection }}">
+          <div class="product-card__image-wrap">
+            {%- if product.featured_image -%}
+              <img
+                class="product-card__img"
+                src="{{ product.featured_image | image_url: width: 800 }}"
+                alt="{{ product.featured_image.alt | escape | default: product.title }}"
+                width="800"
+                height="800"
+                loading="lazy"
+              >
+              {%- if product.images[1] -%}
+                <img
+                  class="product-card__img product-card__img--hover"
+                  src="{{ product.images[1] | image_url: width: 800 }}"
+                  alt="{{ product.images[1].alt | escape | default: product.title }}"
+                  width="800"
+                  height="800"
+                  loading="lazy"
+                >
+              {%- endif -%}
+            {%- else -%}
+              <div class="product-card__placeholder">
+                {{ 'product-1' | placeholder_svg_tag: 'product-card__placeholder-svg' }}
+              </div>
+            {%- endif -%}
+          </div>
+          <div class="product-card__info">
+            <span class="product-card__title">{{ product.title }}</span>
+          </div>
+        </a>
+      {%- endfor -%}
+
+    </div>
+
+    {%- if paginate.pages > 1 -%}
+      <div class="collection-pagination">
+        {%- if paginate.previous -%}
+          <a class="pagination__btn" href="{{ paginate.previous.url }}">← Prev</a>
+        {%- endif -%}
+        <span class="pagination__info">{{ paginate.current_page }} / {{ paginate.pages }}</span>
+        {%- if paginate.next -%}
+          <a class="pagination__btn" href="{{ paginate.next.url }}">Next →</a>
+        {%- endif -%}
       </div>
-    {% endfor %}
+    {%- endif -%}
 
-    {{ paginate | default_pagination }}
-  {% endpaginate %}
-</div>
+  {%- endpaginate -%}
+
+{%- else -%}
+
+  {%- comment %} ── Parent mode: sub-collection card grid ── {%- endcomment %}
+  <div class="col-card-grid">
+
+    {%- if parent_sub_links != nil and parent_sub_links.size > 0 -%}
+
+      {%- for sub in parent_sub_links -%}
+        {%- assign sub_handle = sub.url | remove: '/collections/' -%}
+        {%- assign sub_col    = collections[sub_handle] -%}
+        <a class="col-card" href="{{ sub.url }}">
+          <div class="col-card__image-wrap">
+            {%- if sub_col.featured_image -%}
+              <img
+                class="col-card__img"
+                src="{{ sub_col.featured_image | image_url: width: 800 }}"
+                alt="{{ sub_col.featured_image.alt | escape | default: sub.title }}"
+                width="800"
+                height="800"
+                loading="lazy"
+              >
+            {%- else -%}
+              <div class="col-card__placeholder">
+                {{ 'collection-1' | placeholder_svg_tag: 'col-card__placeholder-svg' }}
+              </div>
+            {%- endif -%}
+          </div>
+          <div class="col-card__info">
+            <span class="col-card__title">{{ sub.title }}</span>
+          </div>
+        </a>
+      {%- endfor -%}
+
+    {%- else -%}
+
+      {%- comment %} Fallback placeholder cards if menu not configured {%- endcomment %}
+      {%- for i in (1..3) -%}
+        <div class="col-card col-card--placeholder">
+          <div class="col-card__image-wrap">
+            {{ 'collection-1' | placeholder_svg_tag: 'col-card__placeholder-svg' }}
+          </div>
+          <div class="col-card__info">
+            <span class="col-card__title">Category</span>
+          </div>
+        </div>
+      {%- endfor -%}
+
+    {%- endif -%}
+
+  </div>
+
+{%- endif -%}
 
 {% stylesheet %}
-  .collection-products {
+  /* ── Breadcrumb ── */
+  .collection-breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding-block: 1.5rem 2rem;
+    font-size: var(--font-size-small);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .collection-breadcrumb a {
+    text-decoration: none;
+    color: var(--color-foreground);
+    transition: opacity 0.15s ease;
+  }
+
+  .collection-breadcrumb a:hover { opacity: 0.5; }
+  .crumb__sep     { opacity: 0.3; }
+  .crumb__current { opacity: 0.45; }
+
+  /* ── Product grid (leaf mode) ── */
+  .product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding-bottom: 4rem;
+  }
+
+  @media (max-width: 540px) {
+    .product-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Product card ── */
+  .product-card {
+    display: block;
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  .product-card__image-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background-color: var(--color-background);
+  }
+
+  .product-card__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: opacity 0.3s ease;
+  }
+
+  .product-card__img--hover { opacity: 0.3; }
+
+  .product-card:hover .product-card__img--hover { opacity: 1; }
+  .product-card:hover .product-card__img:not(.product-card__img--hover) { opacity: 0.3; }
+  .product-card:hover .product-card__title { opacity: 0.5; }
+
+  .product-card__placeholder,
+  .product-card__placeholder-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0.12;
+  }
+
+  .product-card__info {
+    padding: 0.6rem 0 1rem;
+  }
+
+  .product-card__title {
+    font-size: var(--font-size-small);
+    transition: opacity 0.2s ease;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+
+  .product-card--placeholder { pointer-events: none; }
+
+  /* ── Collection card grid (parent mode) ── */
+  .col-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding-bottom: 4rem;
+  }
+
+  @media (max-width: 540px) {
+    .col-card-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Collection card ── */
+  .col-card {
+    display: block;
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  .col-card__image-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background-color: var(--color-background);
+  }
+
+  .col-card__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: opacity 0.3s ease;
+  }
+
+  .col-card:hover .col-card__img { opacity: 0.5; }
+  .col-card:hover .col-card__title { opacity: 0.5; }
+
+  .col-card__placeholder,
+  .col-card__placeholder-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0.12;
+  }
+
+  .col-card__info {
+    padding: 0.6rem 0 1rem;
+  }
+
+  .col-card__title {
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+
+  .col-card--placeholder { pointer-events: none; }
+
+  /* ── Pagination ── */
+  .collection-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+
+  .pagination__btn {
+    text-decoration: none;
+    color: var(--color-foreground);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .pagination__btn:hover { opacity: 0.5; }
+
+  .pagination__info {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    opacity: 0.4;
   }
 {% endstylesheet %}
 
 {% schema %}
 {
   "name": "t:general.collection",
-  "settings": []
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "nav_menu",
+      "label": "Navigation menu",
+      "info": "Used for breadcrumb trail and sub-collection cards. Should match your main navbar menu."
+    },
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "label": "Products per page",
+      "min": 8,
+      "max": 48,
+      "step": 4,
+      "default": 24
+    }
+  ]
 }
 {% endschema %}
