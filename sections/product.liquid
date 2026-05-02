@@ -72,7 +72,7 @@
   <div class="product-gallery">
 
     <div class="gallery__image-area">
-      <div class="gallery__main-wrap">
+      <div class="gallery__main-wrap" id="gallery-main-wrap">
         <img
           id="gallery-main"
           class="gallery__main-img"
@@ -81,29 +81,36 @@
           width="1600"
           height="1600"
           loading="eager"
-          data-fullsize="{{ featured_image | image_url: width: 3200 }}"
         >
       </div>
 
-      <div class="gallery__thumbnails">
-        {%- for image in product_images -%}
-          <button
-            class="gallery__thumb-btn{% if forloop.first %} gallery__thumb-btn--active{% endif %}"
-            data-src="{{ image | image_url: width: 1600 }}"
-            data-fullsize="{{ image | image_url: width: 3200 }}"
-            data-alt="{{ image.alt | escape }}"
-            aria-label="View image {{ forloop.index }}"
-          >
-            <img
-              src="{{ image | image_url: width: 200 }}"
-              alt="{{ image.alt | escape }}"
-              width="80"
-              height="80"
-              loading="lazy"
-            >
-          </button>
-        {%- endfor -%}
-      </div>
+      {%- if product_images.size > 1 -%}
+        <div class="gallery__thumbs-wrap">
+          <button class="gallery__thumb-arrow gallery__thumb-arrow--prev" id="thumb-prev" aria-label="Previous images"></button>
+          <div class="gallery__thumbnails" id="gallery-thumbs">
+            <div class="gallery__thumbs-track" id="gallery-thumbs-track">
+              {%- for image in product_images -%}
+                <button
+                  class="gallery__thumb-btn{% if forloop.first %} gallery__thumb-btn--active{% endif %}"
+                  data-src="{{ image | image_url: width: 1600 }}"
+                  data-alt="{{ image.alt | escape }}"
+                  data-index="{{ forloop.index0 }}"
+                  aria-label="View image {{ forloop.index }}"
+                >
+                  <img
+                    src="{{ image | image_url: width: 200 }}"
+                    alt="{{ image.alt | escape }}"
+                    width="80"
+                    height="80"
+                    loading="lazy"
+                  >
+                </button>
+              {%- endfor -%}
+            </div>
+          </div>
+          <button class="gallery__thumb-arrow gallery__thumb-arrow--next" id="thumb-next" aria-label="Next images"></button>
+        </div>
+      {%- endif -%}
     </div>
 
   </div>
@@ -156,6 +163,7 @@
     {%- form 'product', product, id: 'product-form' -%}
       <input type="hidden" name="id" id="variant-id" value="{{ current_variant.id }}">
 
+      {% comment %}
       <div class="product-selectors">
         {%- for option in product.options_with_values -%}
           {%- unless option.name == 'Color' or option.name == 'Colour' -%}
@@ -187,6 +195,7 @@
           </div>
         </div>
       </div>
+      {% endcomment %}
 
       <button
         type="submit"
@@ -213,7 +222,39 @@
     var thumbBtns      = document.querySelectorAll('.gallery__thumb-btn');
     var swatches       = document.querySelectorAll('.swatch');
     var selects        = document.querySelectorAll('.product-selector__select[data-option-index]');
-    // ── Thumbnail switching ──
+    // ── Thumbnail navigator ──
+    var thumbPrev   = document.getElementById('thumb-prev');
+    var thumbNext   = document.getElementById('thumb-next');
+    var thumbTrack  = document.getElementById('gallery-thumbs-track');
+    var thumbOffset = 0;
+    var VISIBLE     = 3;
+    var STEP        = 2;
+    var THUMB_PX    = 80; // matches CSS width/height of each thumb button img
+    var THUMB_GAP   = 8;  // 0.5rem at 16px base
+
+    function updateThumbs() {
+      if (thumbTrack) {
+        var isMobile = window.innerWidth <= 768;
+        var px = thumbOffset * (THUMB_PX + THUMB_GAP);
+        thumbTrack.style.transform = isMobile
+          ? 'translateX(-' + px + 'px)'
+          : 'translateY(-' + px + 'px)';
+      }
+      var maxOffset = Math.max(0, thumbBtns.length - VISIBLE);
+      if (thumbPrev) thumbPrev.style.opacity = thumbOffset === 0 ? '0.2' : '1';
+      if (thumbNext) thumbNext.style.opacity = thumbOffset >= maxOffset ? '0.2' : '1';
+    }
+
+    if (thumbBtns.length > 0) updateThumbs();
+
+    if (thumbPrev) thumbPrev.addEventListener('click', function () {
+      if (thumbOffset > 0) { thumbOffset = Math.max(0, thumbOffset - STEP); updateThumbs(); }
+    });
+    if (thumbNext) thumbNext.addEventListener('click', function () {
+      var maxOffset = Math.max(0, thumbBtns.length - VISIBLE);
+      if (thumbOffset < maxOffset) { thumbOffset = Math.min(maxOffset, thumbOffset + STEP); updateThumbs(); }
+    });
+
     thumbBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
         thumbBtns.forEach(function (b) { b.classList.remove('gallery__thumb-btn--active'); });
@@ -308,69 +349,69 @@
   /* ── Two-column layout — capped to remaining viewport space ── */
   .product-layout {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 2fr 1fr;
     gap: 4rem;
-    max-height: calc(100svh - 10vh - 8rem);
+    height: calc(100svh - 10vh - 8rem);
     overflow: hidden;
-  }
-
-  @media (max-width: 768px) {
-    .product-layout {
-      grid-template-columns: 1fr;
-      gap: 2rem;
-      height: auto;
-      max-height: none;
-      overflow-y: auto;
-    }
   }
 
   /* ── Gallery ── */
   .product-gallery {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    height: 100%;
     min-height: 0;
+    overflow: hidden;
   }
 
   .gallery__image-area {
     display: grid;
     grid-template-columns: 1fr 80px;
     gap: 0.75rem;
-    overflow: hidden;
-    min-height: 0;
     flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .gallery__main-wrap {
-    overflow: hidden;
+    position: relative;
+    height: 100%;
     min-height: 0;
+    overflow: hidden;
   }
 
-  .gallery__main-img {
-    width: 100%;
-    height: auto;
-    max-height: 100%;
-    display: block;
-    object-fit: contain;
+  /* Thumbnails strip + arrows */
+  .gallery__thumbs-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    justify-content: center;
   }
 
-  /* Thumbnails */
+  /* Clip to exactly 3 thumbnails; inner track slides via transform */
   .gallery__thumbnails {
+    overflow: hidden;
+    /* 3 × 80px thumbs + 2 × 0.5rem gaps */
+    height: calc(3 * 80px + 2 * 0.5rem);
+  }
+
+  .gallery__thumbs-track {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    overflow-y: auto;
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   .gallery__thumb-btn {
     background: none;
-    border: 1px solid transparent;
+    border: none;
     padding: 0;
     cursor: pointer;
     display: block;
     flex-shrink: 0;
     opacity: 0.6;
-    transition: opacity 0.2s ease, border-color 0.2s ease;
+    transition: opacity 0.2s ease, box-shadow 0.2s ease;
   }
 
   .gallery__thumb-btn img {
@@ -383,7 +424,82 @@
   .gallery__thumb-btn:hover,
   .gallery__thumb-btn--active {
     opacity: 1;
-    border-color: var(--color-foreground);
+    /* inset shadow doesn't affect layout dimensions */
+    box-shadow: inset 0 0 0 1px var(--color-foreground);
+  }
+
+  /* Arrows — match carousel chevron style */
+  .gallery__thumb-arrow {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(0, 0, 0, 0.25);
+    transition: color 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .gallery__thumb-arrow:hover { color: var(--color-foreground); }
+
+  .gallery__thumb-arrow::before {
+    content: '';
+    display: block;
+    width: 9px;
+    height: 9px;
+    border-top: 1.5px solid currentColor;
+    border-right: 1.5px solid currentColor;
+  }
+
+  .gallery__thumb-arrow--prev::before { transform: rotate(-45deg); }
+  .gallery__thumb-arrow--next::before { transform: rotate(135deg); }
+
+  @media (max-width: 768px) {
+    .product-layout {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      height: auto;
+      max-height: none;
+      overflow-y: auto;
+    }
+
+    .product-gallery {
+      height: auto;
+    }
+
+    .product-info {
+      padding-bottom: 3rem;
+    }
+
+    .gallery__image-area {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto;
+      height: auto;
+    }
+
+    /* Concrete height so the absolutely-positioned main image fills it */
+    .gallery__main-wrap {
+      height: 100vw;
+    }
+
+    .gallery__thumbs-wrap {
+      flex-direction: row;
+    }
+
+    /* Horizontal clip: 3 × 80px + 2 gaps */
+    .gallery__thumbnails {
+      height: auto;
+      width: calc(3 * 80px + 2 * 0.5rem);
+    }
+
+    .gallery__thumbs-track {
+      flex-direction: row;
+    }
+
+    .gallery__thumb-arrow--prev::before { transform: rotate(-135deg); }
+    .gallery__thumb-arrow--next::before { transform: rotate(45deg); }
   }
 
 /* ── Product info ── */
@@ -417,26 +533,10 @@
     opacity: 0.4;
   }
 
-  /* Description — fixed height, scrolls internally */
   .product-info__description {
     font-size: var(--font-size-small);
     line-height: 1.8;
     letter-spacing: 0.02em;
-    overflow-y: auto;
-    max-height: 12rem;
-    flex-shrink: 0;
-    padding-right: 0.5rem;
-  }
-
-  /* Scrollbar styling */
-  .product-info__description::-webkit-scrollbar {
-    width: 3px;
-  }
-  .product-info__description::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .product-info__description::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--color-foreground) 25%, transparent);
   }
 
   /* Rich text headings within description */
@@ -504,11 +604,12 @@
     flex-direction: column;
     gap: 0.5rem;
     flex-shrink: 0;
+    align-self: flex-start;
   }
 
   .product-selector {
     display: grid;
-    grid-template-columns: 60px 1fr;
+    grid-template-columns: 60px 140px;
     align-items: center;
     gap: 0.5rem;
   }
@@ -559,8 +660,11 @@
 
   /* ── Buy button ── */
   .product-buy-btn {
-    width: 100%;
-    padding: 0.75rem 1rem;
+    display: block;
+    width: fit-content;
+    min-width: 200px;
+    margin: 1rem auto 0;
+    padding: 0.75rem 2rem;
     background-color: var(--color-foreground);
     color: var(--color-background);
     border: none;
@@ -579,6 +683,22 @@
   .product-buy-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 {% endstylesheet %}
+
+{% style %}
+  /*
+   * Inlined to bypass the compiled stylesheet bundle and the global
+   * img { height: auto } reset. position: absolute + inset: 0 gives the
+   * image concrete dimensions so object-fit: contain can scale correctly.
+   */
+  .gallery__main-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+{% endstyle %}
 
 {% schema %}
 {
